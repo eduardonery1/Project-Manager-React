@@ -1,13 +1,18 @@
 import logo from './logo.svg';
 import './App.css';
-import { app } from './firebase.js';
+import { app, db } from './firebase.js';
+import { collection, query, addDoc } from "firebase/firestore";
+import { useCollectionData } from "react-firebase-hooks/firestore";
 import { useState } from "react"
 
 
 function App() {
-  const [projects, setProjects] = useState([]);
-  const [addProject, setAddProject] = useState(false);
+  const projectsRef = collection(db, 'projects');
+  const q = query(projectsRef);
+  const [projects] = useCollectionData(q);
 
+  const [addProject, setAddProject] = useState(false);
+  console.log(addProject);
   const handleAddProject = () => {
     setAddProject(!addProject);
   };
@@ -15,13 +20,16 @@ function App() {
   return (
     <div className="App">
       { 
-        (projects.length !== 0) 
+        (projects) 
         ? (projects.map((project, i) => <Project name={project.name} desc={project.desc} key={i}/>))
         : (<p>{"Não há projetos salvos."}</p>)
       }
 
-      <button id="add-project" onClick={handleAddProject}>{"+"}</button>
-      {addProject? <Modal projects={projects} setProjects={setProjects} toogle={handleAddProject}/>: ''}
+      {
+        (addProject)
+        ? <Modal projectsRef={projectsRef} toogle={handleAddProject}/>
+        : <button id="add-project" onClick={handleAddProject}>{"+"}</button>
+      }
     </div>
   );
 } 
@@ -40,17 +48,18 @@ function Modal(props){
     setDesc(e.target.value);
   };
 
-  const handleNewProject = (e) => {
+  const handleNewProject = async (e) => {
     e.preventDefault();
-    props.setProjects([...props.projects, {
+    await addDoc(props.projectsRef,{
       name: name,
       desc: desc
-    }]);
+    });
     props.toogle();
   };
 
   return (
     <div className='Modal'>
+      <button onClick={props.toogle}>{"X"}</button>
       <form onSubmit={handleNewProject}>
         <input type="text" value={name} onChange={handleNameChange}></input>
         <input type="text" value={desc} onChange={handleDescChange}></input>
